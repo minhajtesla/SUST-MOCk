@@ -2,22 +2,42 @@
 FastAPI app entry point for the QueueStorm Warmup service.
 
 Endpoints:
+    GET  /              -> demo UI (HTML)
     GET  /health        -> service liveness probe
     POST /sort-ticket   -> classify one CRM ticket
+    GET  /static/*      -> CSS / JS assets for the UI
 """
 from __future__ import annotations
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .schemas import TicketRequest, TicketResponse
 from .classifier import classify
 from .summarizer import summarize, make_summary_safe
 
 
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
 app = FastAPI(
     title="QueueStorm Warmup",
     description="Mock CRM ticket triage service for the SUST CSE Carnival 2026 warmup.",
     version="1.0.0",
 )
+
+
+# Mount /static for css/js and serve the demo UI at the root.
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def root() -> FileResponse:
+    """Demo UI."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")
